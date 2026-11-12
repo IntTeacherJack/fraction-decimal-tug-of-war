@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const TOPICS = [
@@ -95,7 +95,7 @@ function nextQuestion(used) {
 
 function App() {
   const usedQuestions = useRef(new Set())
-  const [question, setQuestion] = useState(() => nextQuestion(usedQuestions.current))
+  const [question, setQuestion] = useState(() => generateQuestion(pick(TOPICS)))
   const [round, setRound] = useState(1)
   const [ropePosition, setRopePosition] = useState(0)
   const [scores, setScores] = useState({ left: 0, right: 0 })
@@ -104,6 +104,10 @@ function App() {
   const [pullsToWin, setPullsToWin] = useState(5)
   const [showSettings, setShowSettings] = useState(false)
   const [winner, setWinner] = useState(null)
+
+  useEffect(() => {
+    usedQuestions.current.add(question.signature)
+  }, [question.signature])
 
   function chooseAnswer(team, answer) {
     if (locked || winner) return
