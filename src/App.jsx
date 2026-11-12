@@ -98,8 +98,9 @@ function nextQuestion(used, topicQueue) {
 
 function App() {
   const usedQuestions = useRef(new Set())
-  const topicQueue = useRef(shuffle(TOPICS))
-  const [question, setQuestion] = useState(() => generateQuestion(topicQueue.current.shift()))
+  const [initialTopic] = useState(() => pick(TOPICS))
+  const topicQueue = useRef(shuffle(TOPICS.filter((topic) => topic !== initialTopic)))
+  const [question, setQuestion] = useState(() => generateQuestion(initialTopic))
   const [round, setRound] = useState(1)
   const [ropePosition, setRopePosition] = useState(0)
   const [scores, setScores] = useState({ left: 0, right: 0 })
