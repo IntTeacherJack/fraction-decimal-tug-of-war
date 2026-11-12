@@ -122,6 +122,8 @@ function nextQuestion(used, topicQueue, lastTopic) {
 
 function App() {
   const usedQuestions = useRef(new Set())
+  const inputLocked = useRef(false)
+  const roundTimer = useRef(null)
   const [initialTopic] = useState(() => pick(TOPICS))
   const topicQueue = useRef(shuffle(TOPICS.filter((topic) => topic !== initialTopic)))
   const lastTopic = useRef(initialTopic)
@@ -139,8 +141,13 @@ function App() {
     usedQuestions.current.add(question.signature)
   }, [question.signature])
 
+  useEffect(() => () => window.clearTimeout(roundTimer.current), [])
+
   function chooseAnswer(team, answer) {
-    if (locked || winner) return
+    // State updates are asynchronous. A ref locks immediately, preventing a
+    // burst of simultaneous touchscreen taps from processing one round twice.
+    if (inputLocked.current || winner) return
+    inputLocked.current = true
     const correct = answer === question.correct
     const pull = team === 'left' ? (correct ? -1 : 1) : correct ? 1 : -1
     const newPosition = ropePosition + pull
@@ -152,7 +159,7 @@ function App() {
     } else {
       setMessage(`Wrong answer — ${team === 'left' ? 'Orange' : 'Blue'} pulls the rope!`)
     }
-    window.setTimeout(() => {
+    roundTimer.current = window.setTimeout(() => {
       if (Math.abs(newPosition) >= pullsToWin) {
         const winningTeam = newPosition < 0 ? 'left' : 'right'
         setWinner(winningTeam)
@@ -163,6 +170,7 @@ function App() {
         setMessage('First correct tap wins the pull!')
       }
       setLocked(false)
+      inputLocked.current = false
     }, 800)
   }
 
@@ -176,6 +184,8 @@ function App() {
     setScores({ left: 0, right: 0 })
     setMessage('First correct tap wins the pull!')
     setLocked(false)
+    inputLocked.current = false
+    window.clearTimeout(roundTimer.current)
     setWinner(null)
   }
 
@@ -213,7 +223,7 @@ function App() {
 }
 
 function AnswerSide({ team, side, question, onChoose, disabled }) {
-  return <div className={`answer-side ${side}-side`}><p>{team} — TOUCH AN ANSWER</p><div className="answers">{question.answers.map((answer) => <button className="answer" key={answer} onClick={() => onChoose(answer)} disabled={disabled}><span>{answer}</span></button>)}</div></div>
+  return <div className={`answer-side ${side}-side`}><p>{team} — TOUCH AN ANSWER</p><div className="answers">{question.answers.map((answer) => <button className="answer" key={answer} onPointerDown={(event) => { event.preventDefault(); onChoose(answer) }} disabled={disabled}><span>{answer}</span></button>)}</div></div>
 }
 
 function QuestionPrompt({ question }) {
