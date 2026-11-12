@@ -1,6 +1,6 @@
 # Fraction, Decimal Tug of War
 
-A touchscreen-friendly classroom game: two teams race to touch the greater value—fraction or decimal—and pull the rope toward their side.
+A touchscreen-friendly classroom game for two teams. The **first correct tap** pulls the rope toward that team.
 
 ## Run locally
 
@@ -21,4 +21,13 @@ This is a static Vite site and works on Vercel Hobby without a backend.
 
 ## How to play
 
-Each round shows one fraction and one decimal. Both teams choose the greater value from their side of the screen. Correct answers award a point and pull the rope toward the answering team. The game ends after ten rounds.
+The default **Mixed Practice** mode generates varied questions from six topics:
+
+- terminating vs. recurring decimals
+- simplifying fractions
+- converting terminating decimals to simplified fractions
+- basic fraction/decimal conversions (including halves, fifths, and tenths)
+- identifying the HCF of a fraction's numerator and denominator
+- simplifying very simple algebraic expressions
+
+Wrong taps do not award a pull; the first correct tap does. Select **Settings** to choose between 2 and 10 pulls needed to win, which controls how long the game lasts. Questions are generated dynamically and recent prompts are not repeated during a game.

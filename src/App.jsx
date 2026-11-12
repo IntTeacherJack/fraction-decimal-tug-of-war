@@ -1,131 +1,187 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useRef, useState } from 'react'
 import './App.css'
 
-const ROUND_COUNT = 10
-
-const questionBank = [
-  { fraction: '1/2', decimal: '0.7', winner: 'decimal' },
-  { fraction: '3/4', decimal: '0.6', winner: 'fraction' },
-  { fraction: '1/4', decimal: '0.3', winner: 'decimal' },
-  { fraction: '2/5', decimal: '0.5', winner: 'decimal' },
-  { fraction: '3/5', decimal: '0.45', winner: 'fraction' },
-  { fraction: '7/10', decimal: '0.65', winner: 'fraction' },
-  { fraction: '1/5', decimal: '0.15', winner: 'fraction' },
-  { fraction: '5/8', decimal: '0.7', winner: 'decimal' },
-  { fraction: '4/5', decimal: '0.75', winner: 'fraction' },
-  { fraction: '3/10', decimal: '0.25', winner: 'fraction' },
-  { fraction: '7/8', decimal: '0.8', winner: 'fraction' },
-  { fraction: '2/3', decimal: '0.6', winner: 'fraction' },
+const TOPICS = [
+  'Terminating or recurring',
+  'Simplifying fractions',
+  'Decimals into fractions',
+  'Fraction & decimal conversions',
+  'HCF in a fraction',
+  'Simple algebra',
 ]
 
-function shuffledQuestions() {
-  return [...questionBank].sort(() => Math.random() - 0.5).slice(0, ROUND_COUNT)
+const gcd = (a, b) => (b ? gcd(b, a % b) : a)
+const pick = (items) => items[Math.floor(Math.random() * items.length)]
+const shuffle = (items) => [...items].sort(() => Math.random() - 0.5)
+
+function formatFraction(top, bottom) {
+  return `${top}/${bottom}`
+}
+
+function generateQuestion(topic) {
+  if (topic === 'Terminating or recurring') {
+    const terminating = Math.random() < 0.5
+    const denominators = terminating ? [2, 4, 5, 8, 10, 20, 25] : [3, 6, 7, 9, 11, 12, 15]
+    const bottom = pick(denominators)
+    const top = pick(Array.from({ length: bottom - 1 }, (_, index) => index + 1).filter((number) => gcd(number, bottom) === 1))
+    return makeQuestion(topic, `Is ${formatFraction(top, bottom)} a terminating or recurring decimal?`, ['Terminating', 'Recurring'], terminating ? 'Terminating' : 'Recurring', `${top}/${bottom}`)
+  }
+
+  if (topic === 'Simplifying fractions') {
+    const divisor = pick([2, 3, 4, 5, 6])
+    const bottom = pick([2, 3, 4, 5, 6, 7, 8, 9])
+    const top = pick(Array.from({ length: bottom - 1 }, (_, index) => index + 1).filter((number) => gcd(number, bottom) === 1))
+    const original = formatFraction(top * divisor, bottom * divisor)
+    const correct = formatFraction(top, bottom)
+    const wrongTop = top === 1 ? 2 : top - 1
+    const wrong = formatFraction(wrongTop, bottom)
+    return makeQuestion(topic, `Simplify ${original}`, [correct, wrong], correct, original)
+  }
+
+  if (topic === 'Decimals into fractions') {
+    const scale = pick([10, 100])
+    const numerator = pick(Array.from({ length: scale - 1 }, (_, index) => index + 1).filter((number) => gcd(number, scale) > 1 && number % 10 !== 0))
+    const divisor = gcd(numerator, scale)
+    const decimal = (numerator / scale).toString()
+    const correct = formatFraction(numerator / divisor, scale / divisor)
+    const wrong = formatFraction(numerator, scale)
+    return makeQuestion(topic, `Write ${decimal} as a fraction in its simplest form.`, [correct, wrong], correct, decimal)
+  }
+
+  if (topic === 'Fraction & decimal conversions') {
+    const pairs = [['1/2', '0.5'], ['1/5', '0.2'], ['1/10', '0.1'], ['1/4', '0.25'], ['3/4', '0.75'], ['2/5', '0.4'], ['3/5', '0.6'], ['7/10', '0.7'], ['1/20', '0.05']]
+    const [fraction, decimal] = pick(pairs)
+    const otherDecimals = pairs.map((pair) => pair[1]).filter((item) => item !== decimal)
+    const wrong = pick(otherDecimals)
+    return makeQuestion(topic, `Which decimal is equal to ${fraction}?`, [decimal, wrong], decimal, fraction)
+  }
+
+  if (topic === 'HCF in a fraction') {
+    const factor = pick([2, 3, 4, 5, 6, 8])
+    const basePairs = [[2, 3], [3, 4], [3, 5], [4, 5], [5, 6], [5, 7], [6, 7]]
+    const [a, b] = pick(basePairs)
+    const top = factor * a
+    const bottom = factor * b
+    const wrong = factor === 2 ? 3 : factor - 1
+    return makeQuestion(topic, `What is the HCF of ${top} and ${bottom}?`, [String(factor), String(wrong)], String(factor), `${top}/${bottom}`)
+  }
+
+  const variable = pick(['x', 'y', 'a', 'm'])
+  const first = pick([2, 3, 4, 5, 6, 7])
+  const second = pick([2, 3, 4, 5])
+  const add = Math.random() < 0.55
+  const result = add ? first + second : first - second
+  const sign = add ? '+' : '−'
+  const correct = `${result}${variable}`
+  const wrong = `${first * second}${variable}`
+  return makeQuestion(topic, `Simplify: ${first}${variable} ${sign} ${second}${variable}`, [correct, wrong], correct, `${first}${variable}${sign}${second}${variable}`)
+}
+
+function makeQuestion(topic, prompt, answers, correct, signature) {
+  return { topic, prompt, answers: shuffle(answers), correct, signature: `${topic}:${signature}` }
+}
+
+function nextQuestion(used) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const question = generateQuestion(pick(TOPICS))
+    if (!used.has(question.signature)) {
+      used.add(question.signature)
+      return question
+    }
+  }
+  used.clear()
+  return generateQuestion(pick(TOPICS))
 }
 
 function App() {
-  const [questions, setQuestions] = useState(shuffledQuestions)
-  const [round, setRound] = useState(0)
+  const usedQuestions = useRef(new Set())
+  const [question, setQuestion] = useState(() => nextQuestion(usedQuestions.current))
+  const [round, setRound] = useState(1)
   const [ropePosition, setRopePosition] = useState(0)
   const [scores, setScores] = useState({ left: 0, right: 0 })
-  const [message, setMessage] = useState('Touch the greater value!')
+  const [message, setMessage] = useState('First correct tap wins the pull!')
   const [locked, setLocked] = useState(false)
-
-  const question = questions[round]
-  const gameOver = round >= ROUND_COUNT
-  const result = useMemo(() => {
-    if (!gameOver) return null
-    if (scores.left === scores.right) return "It's a draw!"
-    return scores.left > scores.right ? 'Blue team wins!' : 'Orange team wins!'
-  }, [gameOver, scores])
-
-  useEffect(() => {
-    if (!locked) return undefined
-    const nextRound = window.setTimeout(() => {
-      if (round + 1 >= ROUND_COUNT) {
-        setRound(ROUND_COUNT)
-        setMessage('Final whistle!')
-      } else {
-        setRound((current) => current + 1)
-        setMessage('Touch the greater value!')
-      }
-      setLocked(false)
-    }, 900)
-    return () => window.clearTimeout(nextRound)
-  }, [locked, round])
+  const [pullsToWin, setPullsToWin] = useState(5)
+  const [showSettings, setShowSettings] = useState(false)
+  const [winner, setWinner] = useState(null)
 
   function chooseAnswer(team, answer) {
-    if (locked || gameOver) return
-    setLocked(true)
-    const correct = answer === question.winner
-    const pull = team === 'left' ? (correct ? -1 : 1) : correct ? 1 : -1
-    setRopePosition((position) => Math.max(-4, Math.min(4, position + pull)))
-    if (correct) {
-      setScores((current) => ({ ...current, [team]: current[team] + 1 }))
-      setMessage(`${team === 'left' ? 'Blue' : 'Orange'} team pulls the rope!`)
-    } else {
-      setMessage('Not quite — the other team pulls!')
+    if (locked || winner) return
+    if (answer !== question.correct) {
+      setMessage('Try again — only the first correct tap earns the pull!')
+      return
     }
+    const pull = team === 'left' ? -1 : 1
+    const newPosition = ropePosition + pull
+    setLocked(true)
+    setRopePosition(newPosition)
+    setScores((current) => ({ ...current, [team]: current[team] + 1 }))
+    setMessage(`${team === 'left' ? 'Blue' : 'Orange'} team pulls the rope!`)
+    window.setTimeout(() => {
+      if (Math.abs(newPosition) >= pullsToWin) {
+        setWinner(team)
+        setMessage(`${team === 'left' ? 'Blue' : 'Orange'} team wins!`)
+      } else {
+        setQuestion(nextQuestion(usedQuestions.current))
+        setRound((current) => current + 1)
+        setMessage('First correct tap wins the pull!')
+      }
+      setLocked(false)
+    }, 800)
   }
 
   function restart() {
-    setQuestions(shuffledQuestions())
-    setRound(0)
+    usedQuestions.current.clear()
+    setQuestion(nextQuestion(usedQuestions.current))
+    setRound(1)
     setRopePosition(0)
     setScores({ left: 0, right: 0 })
-    setMessage('Touch the greater value!')
+    setMessage('First correct tap wins the pull!')
     setLocked(false)
+    setWinner(null)
   }
 
-  return (
-    <main className="game-shell">
-      <header className="topbar">
-        <div className="brand"><span aria-hidden="true">↔</span> Fraction, Decimal Tug of War</div>
-        <div className="round">ROUND {Math.min(round + 1, ROUND_COUNT)} <span>OF {ROUND_COUNT}</span></div>
-        <button className="restart" onClick={restart}>↻ New game</button>
-      </header>
+  function saveSettings(event) {
+    event.preventDefault()
+    setShowSettings(false)
+    restart()
+  }
 
-      <section className="teams" aria-label="Team scores">
-        <div className="team blue"><span>BLUE TEAM</span><strong>{scores.left}</strong></div>
-        <div className="prompt">
-          <p>{gameOver ? result : message}</p>
-          {!gameOver && <h1>Which value is <em>greater?</em></h1>}
-        </div>
-        <div className="team orange"><span>ORANGE TEAM</span><strong>{scores.right}</strong></div>
+  return <main className="game-shell">
+    <header className="topbar">
+      <div className="brand"><span aria-hidden="true">↔</span> Fraction, Decimal Tug of War</div>
+      <div className="round">ROUND {round} <span>· MIXED PRACTICE</span></div>
+      <div className="header-actions"><button className="restart" onClick={() => setShowSettings(true)}>⚙ Settings</button><button className="restart" onClick={restart}>↻ New game</button></div>
+    </header>
+
+    <section className="teams" aria-label="Team scores">
+      <div className="team blue"><span>BLUE TEAM</span><strong>{scores.left}</strong></div>
+      <div className="prompt"><p className="topic">{winner ? 'GAME COMPLETE' : question.topic}</p><p>{message}</p><h1>{winner ? `${winner === 'left' ? 'Blue' : 'Orange'} team wins!` : question.prompt}</h1></div>
+      <div className="team orange"><span>ORANGE TEAM</span><strong>{scores.right}</strong></div>
+    </section>
+
+    {!winner ? <>
+      <section className="answer-zone" aria-label="Choose the correct answer">
+        <AnswerSide team="BLUE TEAM" side="left" question={question} onChoose={(answer) => chooseAnswer('left', answer)} disabled={locked} />
+        <div className="versus" aria-hidden="true">VS</div>
+        <AnswerSide team="ORANGE TEAM" side="right" question={question} onChoose={(answer) => chooseAnswer('right', answer)} disabled={locked} />
       </section>
+      <Rope ropePosition={ropePosition} pullsToWin={pullsToWin} />
+    </> : <section className="winner-card"><div className="trophy" aria-hidden="true">🏆</div><h2>{winner === 'left' ? 'Blue' : 'Orange'} team wins!</h2><p>They reached {pullsToWin} pulls first.</p><button onClick={restart}>Play again</button></section>}
+    <footer>Mixed practice · First correct tap wins · First to {pullsToWin} pulls wins</footer>
 
-      {!gameOver ? (
-        <>
-          <section className="answer-zone" aria-label="Choose the greater value">
-            <div className="answer-side left-side">
-              <p>BLUE TEAM — TOUCH AN ANSWER</p>
-              <AnswerButtons question={question} onChoose={(answer) => chooseAnswer('left', answer)} disabled={locked} />
-            </div>
-            <div className="versus" aria-hidden="true">VS</div>
-            <div className="answer-side right-side">
-              <p>ORANGE TEAM — TOUCH AN ANSWER</p>
-              <AnswerButtons question={question} onChoose={(answer) => chooseAnswer('right', answer)} disabled={locked} />
-            </div>
-          </section>
-          <section className="rope-ground" aria-label="Tug of war rope">
-            <div className="rope-track"><div className="center-line" /><div className="rope" style={{ transform: `translateX(${ropePosition * 9}%)` }}><span className="flag">⚑</span></div></div>
-            <div className="pull-label left-pull">BLUE PULLS ←</div><div className="pull-label right-pull">→ ORANGE PULLS</div>
-          </section>
-        </>
-      ) : (
-        <section className="winner-card">
-          <div className="trophy" aria-hidden="true">🏆</div><h2>{result}</h2><p>Thanks for playing! Ready for another ten rounds?</p><button onClick={restart}>Play again</button>
-        </section>
-      )}
-      <footer>Two teams · One touchscreen · Big math energy</footer>
-    </main>
-  )
+    {showSettings && <div className="modal-backdrop" role="presentation"><form className="settings-card" onSubmit={saveSettings}><button type="button" className="close" onClick={() => setShowSettings(false)} aria-label="Close settings">×</button><p className="topic">GAME SETTINGS</p><h2>How long should the game last?</h2><label htmlFor="pulls">Pulls needed to win <strong>{pullsToWin}</strong></label><input id="pulls" type="range" min="2" max="10" value={pullsToWin} onChange={(event) => setPullsToWin(Number(event.target.value))} /><div className="range-labels"><span>Quick<br />2 pulls</span><span>Long<br />10 pulls</span></div><p className="settings-note">Changing this starts a fresh mixed-practice game. Every round is generated from all six topics.</p><button className="save-settings" type="submit">Save & start game</button></form></div>}
+  </main>
 }
 
-function AnswerButtons({ question, onChoose, disabled }) {
-  return <div className="answers">
-    <button className="answer fraction" onClick={() => onChoose('fraction')} disabled={disabled} aria-label={`Choose fraction ${question.fraction}`}><small>FRACTION</small><span>{question.fraction}</span></button>
-    <button className="answer decimal" onClick={() => onChoose('decimal')} disabled={disabled} aria-label={`Choose decimal ${question.decimal}`}><small>DECIMAL</small><span>{question.decimal}</span></button>
-  </div>
+function AnswerSide({ team, side, question, onChoose, disabled }) {
+  return <div className={`answer-side ${side}-side`}><p>{team} — TOUCH AN ANSWER</p><div className="answers">{question.answers.map((answer) => <button className="answer" key={answer} onClick={() => onChoose(answer)} disabled={disabled}>{answer}</button>)}</div></div>
+}
+
+function Rope({ ropePosition, pullsToWin }) {
+  const maxOffset = 37
+  const offset = (ropePosition / pullsToWin) * maxOffset
+  return <section className="rope-ground" aria-label="Tug of war rope"><div className="rope-track"><div className="center-line" /><div className="rope" style={{ transform: `translateX(${offset}vw)` }}><span className="flag">⚑</span></div></div><div className="pull-label left-pull">BLUE PULLS ←</div><div className="pull-label right-pull">→ ORANGE PULLS</div></section>
 }
 
 export default App
