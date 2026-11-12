@@ -185,7 +185,7 @@ function App() {
 }
 
 function AnswerSide({ team, side, question, onChoose, disabled }) {
-  return <div className={`answer-side ${side}-side`}><p>{team} — TOUCH AN ANSWER</p><div className="answers">{question.answers.map((answer) => <button className="answer" key={answer} onClick={() => onChoose(answer)} disabled={disabled}>{answer}</button>)}</div></div>
+  return <div className={`answer-side ${side}-side`}><p>{team} — TOUCH AN ANSWER</p><div className="answers">{question.answers.map((answer) => <button className="answer" key={answer} onClick={() => onChoose(answer)} disabled={disabled}><span>{answer}</span></button>)}</div></div>
 }
 
 function Rope({ ropePosition, pullsToWin }) {
