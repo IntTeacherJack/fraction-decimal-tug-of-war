@@ -14,6 +14,7 @@ const gcd = (a, b) => (b ? gcd(b, a % b) : a)
 const pick = (items) => items[Math.floor(Math.random() * items.length)]
 const shuffle = (items) => [...items].sort(() => Math.random() - 0.5)
 const coprimePairs = [[1, 2], [1, 3], [2, 3], [2, 5], [3, 4], [3, 5], [4, 5]]
+const factorsOf = (number) => Array.from({ length: number }, (_, index) => index + 1).filter((factor) => number % factor === 0)
 
 function formatFraction(top, bottom) {
   return `${top}/${bottom}`
@@ -34,8 +35,7 @@ function generateQuestion(topic) {
     const top = pick(Array.from({ length: bottom - 1 }, (_, index) => index + 1).filter((number) => gcd(number, bottom) === 1))
     const original = formatFraction(top * divisor, bottom * divisor)
     const correct = formatFraction(top, bottom)
-    const wrongTop = top === 1 ? 2 : top - 1
-    const wrong = formatFraction(wrongTop, bottom)
+    const wrong = formatFraction(top * divisor, bottom)
     return makeQuestion(topic, `Simplify ${original}`, [correct, wrong], correct, original)
   }
 
@@ -63,7 +63,9 @@ function generateQuestion(topic) {
     const [a, b] = pick(basePairs)
     const top = factor * a
     const bottom = factor * b
-    const wrong = factor === 2 ? 3 : factor - 1
+    const wrongFactors = [...new Set([...factorsOf(top), ...factorsOf(bottom)])]
+      .filter((candidate) => candidate !== factor && (top % candidate !== 0 || bottom % candidate !== 0))
+    const wrong = pick(wrongFactors)
     return makeQuestion(topic, `What is the HCF of ${top} and ${bottom}?`, [String(factor), String(wrong)], String(factor), `${top}/${bottom}`)
   }
 
@@ -86,7 +88,7 @@ function generateQuestion(topic) {
   const result = add ? first + second : first - second
   const sign = add ? '+' : '−'
   const correct = `${result}${variable}`
-  const wrong = `${first * second}${variable}`
+  const wrong = `${add ? first - second : first + second}${variable}`
   return makeQuestion(topic, `Simplify: ${first}${variable} ${sign} ${second}${variable}`, [correct, wrong], correct, `${first}${variable}${sign}${second}${variable}`)
 }
 
