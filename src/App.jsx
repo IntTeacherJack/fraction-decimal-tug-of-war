@@ -21,7 +21,7 @@ function formatFraction(top, bottom) {
 function generateQuestion(topic) {
   if (topic === 'Terminating or recurring') {
     const terminating = Math.random() < 0.5
-    const denominators = terminating ? [2, 4, 5, 8, 10, 20, 25] : [3, 6, 7, 9, 11, 12, 15]
+    const denominators = terminating ? [2, 4, 5, 8, 10, 16, 20, 25, 32, 40, 50, 64, 80, 100] : [3, 6, 7, 9, 11, 12, 13, 14, 15, 18, 21, 22, 24, 27, 28, 33, 35, 36, 39, 45]
     const bottom = pick(denominators)
     const top = pick(Array.from({ length: bottom - 1 }, (_, index) => index + 1).filter((number) => gcd(number, bottom) === 1))
     return makeQuestion(topic, `Is ${formatFraction(top, bottom)} a terminating or recurring decimal?`, ['Terminating', 'Recurring'], terminating ? 'Terminating' : 'Recurring', `${top}/${bottom}`)
