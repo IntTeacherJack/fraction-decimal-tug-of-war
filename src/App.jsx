@@ -13,6 +13,7 @@ const TOPICS = [
 const gcd = (a, b) => (b ? gcd(b, a % b) : a)
 const pick = (items) => items[Math.floor(Math.random() * items.length)]
 const shuffle = (items) => [...items].sort(() => Math.random() - 0.5)
+const coprimePairs = [[1, 2], [1, 3], [2, 3], [2, 5], [3, 4], [3, 5], [4, 5]]
 
 function formatFraction(top, bottom) {
   return `${top}/${bottom}`
@@ -28,8 +29,8 @@ function generateQuestion(topic) {
   }
 
   if (topic === 'Simplifying fractions') {
-    const divisor = pick([2, 3, 4, 5, 6])
-    const bottom = pick([2, 3, 4, 5, 6, 7, 8, 9])
+    const divisor = pick([3, 4, 5, 6, 8, 9, 10, 12])
+    const bottom = pick([3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
     const top = pick(Array.from({ length: bottom - 1 }, (_, index) => index + 1).filter((number) => gcd(number, bottom) === 1))
     const original = formatFraction(top * divisor, bottom * divisor)
     const correct = formatFraction(top, bottom)
@@ -39,7 +40,7 @@ function generateQuestion(topic) {
   }
 
   if (topic === 'Decimals into fractions') {
-    const scale = pick([10, 100])
+    const scale = pick([10, 100, 100, 1000])
     const numerator = pick(Array.from({ length: scale - 1 }, (_, index) => index + 1).filter((number) => gcd(number, scale) > 1 && number % 10 !== 0))
     const divisor = gcd(numerator, scale)
     const decimal = (numerator / scale).toString()
@@ -49,7 +50,7 @@ function generateQuestion(topic) {
   }
 
   if (topic === 'Fraction & decimal conversions') {
-    const pairs = [['1/2', '0.5'], ['1/5', '0.2'], ['1/10', '0.1'], ['1/4', '0.25'], ['3/4', '0.75'], ['2/5', '0.4'], ['3/5', '0.6'], ['7/10', '0.7'], ['1/20', '0.05']]
+    const pairs = [['1/2', '0.5'], ['1/5', '0.2'], ['1/10', '0.1'], ['1/4', '0.25'], ['3/4', '0.75'], ['2/5', '0.4'], ['3/5', '0.6'], ['7/10', '0.7'], ['1/20', '0.05'], ['1/8', '0.125'], ['3/8', '0.375'], ['1/25', '0.04'], ['7/20', '0.35']]
     const [fraction, decimal] = pick(pairs)
     const otherDecimals = pairs.map((pair) => pair[1]).filter((item) => item !== decimal)
     const wrong = pick(otherDecimals)
@@ -57,8 +58,8 @@ function generateQuestion(topic) {
   }
 
   if (topic === 'HCF in a fraction') {
-    const factor = pick([2, 3, 4, 5, 6, 8])
-    const basePairs = [[2, 3], [3, 4], [3, 5], [4, 5], [5, 6], [5, 7], [6, 7]]
+    const factor = pick([3, 4, 5, 6, 8, 9, 10, 12])
+    const basePairs = [[3, 4], [3, 5], [4, 5], [5, 6], [5, 7], [6, 7], [7, 9], [7, 10]]
     const [a, b] = pick(basePairs)
     const top = factor * a
     const bottom = factor * b
@@ -66,10 +67,22 @@ function generateQuestion(topic) {
     return makeQuestion(topic, `What is the HCF of ${top} and ${bottom}?`, [String(factor), String(wrong)], String(factor), `${top}/${bottom}`)
   }
 
+  if (Math.random() < 0.55) {
+    const commonFactor = pick([2, 3, 4, 5])
+    const [topFactor, bottomFactor] = pick(coprimePairs)
+    const numerator = commonFactor * topFactor
+    const denominator = commonFactor * bottomFactor
+    const variable = pick(['a', 'x', 'm'])
+    const remaining = pick(['b', 'y', 'n'])
+    const correct = `${topFactor === 1 ? '' : topFactor}${remaining}/${bottomFactor}`
+    const wrong = `${numerator}${remaining}/${denominator}`
+    return makeQuestion(topic, 'Simplify:', [correct, wrong], correct, `${numerator}${variable}${remaining}/${denominator}${variable}`, { numerator: `${numerator}${variable}${remaining}`, denominator: `${denominator}${variable}` })
+  }
+
   const variable = pick(['x', 'y', 'a', 'm'])
-  const first = pick([2, 3, 4, 5, 6, 7])
-  const second = pick([2, 3, 4, 5])
-  const add = Math.random() < 0.55
+  const first = pick([4, 5, 6, 7, 8, 9, 10, 12])
+  const second = pick([2, 3, 4, 5, 6, 7])
+  const add = Math.random() < 0.5
   const result = add ? first + second : first - second
   const sign = add ? '+' : '−'
   const correct = `${result}${variable}`
@@ -77,29 +90,39 @@ function generateQuestion(topic) {
   return makeQuestion(topic, `Simplify: ${first}${variable} ${sign} ${second}${variable}`, [correct, wrong], correct, `${first}${variable}${sign}${second}${variable}`)
 }
 
-function makeQuestion(topic, prompt, answers, correct, signature) {
-  return { topic, prompt, answers: shuffle(answers), correct, signature: `${topic}:${signature}` }
+function makeQuestion(topic, prompt, answers, correct, signature, mathFraction = null) {
+  return { topic, prompt, answers: shuffle(answers), correct, signature: `${topic}:${signature}`, mathFraction }
 }
 
-function nextQuestion(used, topicQueue) {
+function freshTopicCycle(lastTopic) {
+  const topics = shuffle(TOPICS)
+  if (topics[0] === lastTopic) [topics[0], topics[1]] = [topics[1], topics[0]]
+  return topics
+}
+
+function nextQuestion(used, topicQueue, lastTopic) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
-    if (topicQueue.current.length === 0) topicQueue.current = shuffle(TOPICS)
+    if (topicQueue.current.length === 0) topicQueue.current = freshTopicCycle(lastTopic.current)
     const topic = topicQueue.current.shift()
     const question = generateQuestion(topic)
     if (!used.has(question.signature)) {
       used.add(question.signature)
+      lastTopic.current = topic
       return question
     }
   }
   used.clear()
-  if (topicQueue.current.length === 0) topicQueue.current = shuffle(TOPICS)
-  return generateQuestion(topicQueue.current.shift())
+  if (topicQueue.current.length === 0) topicQueue.current = freshTopicCycle(lastTopic.current)
+  const topic = topicQueue.current.shift()
+  lastTopic.current = topic
+  return generateQuestion(topic)
 }
 
 function App() {
   const usedQuestions = useRef(new Set())
   const [initialTopic] = useState(() => pick(TOPICS))
   const topicQueue = useRef(shuffle(TOPICS.filter((topic) => topic !== initialTopic)))
+  const lastTopic = useRef(initialTopic)
   const [question, setQuestion] = useState(() => generateQuestion(initialTopic))
   const [round, setRound] = useState(1)
   const [ropePosition, setRopePosition] = useState(0)
@@ -133,7 +156,7 @@ function App() {
         setWinner(winningTeam)
         setMessage(`${winningTeam === 'left' ? 'Blue' : 'Orange'} team wins!`)
       } else {
-        setQuestion(nextQuestion(usedQuestions.current, topicQueue))
+        setQuestion(nextQuestion(usedQuestions.current, topicQueue, lastTopic))
         setRound((current) => current + 1)
         setMessage('First correct tap wins the pull!')
       }
@@ -143,8 +166,9 @@ function App() {
 
   function restart() {
     usedQuestions.current.clear()
-    topicQueue.current = shuffle(TOPICS)
-    setQuestion(nextQuestion(usedQuestions.current, topicQueue))
+    topicQueue.current = freshTopicCycle('')
+    lastTopic.current = topicQueue.current.shift()
+    setQuestion(generateQuestion(lastTopic.current))
     setRound(1)
     setRopePosition(0)
     setScores({ left: 0, right: 0 })
@@ -168,7 +192,7 @@ function App() {
 
     <section className="teams" aria-label="Team scores">
       <div className="team blue"><span>BLUE TEAM</span><strong>{scores.left}</strong></div>
-      <div className="prompt"><p className="topic">{winner ? 'GAME COMPLETE' : question.topic}</p><p>{message}</p><h1>{winner ? `${winner === 'left' ? 'Blue' : 'Orange'} team wins!` : question.prompt}</h1></div>
+      <div className="prompt"><p className="topic">{winner ? 'GAME COMPLETE' : question.topic}</p><p>{message}</p><h1>{winner ? `${winner === 'left' ? 'Blue' : 'Orange'} team wins!` : <QuestionPrompt question={question} />}</h1></div>
       <div className="team orange"><span>ORANGE TEAM</span><strong>{scores.right}</strong></div>
     </section>
 
@@ -188,6 +212,11 @@ function App() {
 
 function AnswerSide({ team, side, question, onChoose, disabled }) {
   return <div className={`answer-side ${side}-side`}><p>{team} — TOUCH AN ANSWER</p><div className="answers">{question.answers.map((answer) => <button className="answer" key={answer} onClick={() => onChoose(answer)} disabled={disabled}><span>{answer}</span></button>)}</div></div>
+}
+
+function QuestionPrompt({ question }) {
+  if (!question.mathFraction) return question.prompt
+  return <>{question.prompt} <span className="math-fraction" aria-label={`${question.mathFraction.numerator} over ${question.mathFraction.denominator}`}><span>{question.mathFraction.numerator}</span><span>{question.mathFraction.denominator}</span></span></>
 }
 
 function Rope({ ropePosition, pullsToWin }) {

@@ -28,6 +28,6 @@ The default **Mixed Practice** mode generates varied questions from six topics:
 - converting terminating decimals to simplified fractions
 - basic fraction/decimal conversions (including halves, fifths, and tenths)
 - identifying the HCF of a fraction's numerator and denominator
-- simplifying very simple algebraic expressions
+- simplifying basic algebraic expressions, including algebraic fractions with cancelling variables
 
-The first correct tap earns a pull. A wrong tap pulls the rope one step toward the opponent, but does not add to their score. Select **Settings** to choose between 2 and 10 pulls needed to win, which controls how long the game lasts. Mixed Practice is always active: all six topics appear once in a shuffled cycle before a topic repeats. Questions are generated dynamically and recent prompts are not repeated during a game.
+The first correct tap earns a pull. A wrong tap pulls the rope one step toward the opponent, but does not add to their score. Select **Settings** to choose between 2 and 10 pulls needed to win, which controls how long the game lasts. Mixed Practice is always active: all six topics appear once in a shuffled cycle before a topic repeats, with a new order every cycle. Questions are generated dynamically and recent prompts are not repeated during a game.
