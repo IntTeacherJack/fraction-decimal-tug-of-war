@@ -81,21 +81,25 @@ function makeQuestion(topic, prompt, answers, correct, signature) {
   return { topic, prompt, answers: shuffle(answers), correct, signature: `${topic}:${signature}` }
 }
 
-function nextQuestion(used) {
+function nextQuestion(used, topicQueue) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
-    const question = generateQuestion(pick(TOPICS))
+    if (topicQueue.current.length === 0) topicQueue.current = shuffle(TOPICS)
+    const topic = topicQueue.current.shift()
+    const question = generateQuestion(topic)
     if (!used.has(question.signature)) {
       used.add(question.signature)
       return question
     }
   }
   used.clear()
-  return generateQuestion(pick(TOPICS))
+  if (topicQueue.current.length === 0) topicQueue.current = shuffle(TOPICS)
+  return generateQuestion(topicQueue.current.shift())
 }
 
 function App() {
   const usedQuestions = useRef(new Set())
-  const [question, setQuestion] = useState(() => generateQuestion(pick(TOPICS)))
+  const topicQueue = useRef(shuffle(TOPICS))
+  const [question, setQuestion] = useState(() => generateQuestion(topicQueue.current.shift()))
   const [round, setRound] = useState(1)
   const [ropePosition, setRopePosition] = useState(0)
   const [scores, setScores] = useState({ left: 0, right: 0 })
@@ -126,7 +130,7 @@ function App() {
         setWinner(team)
         setMessage(`${team === 'left' ? 'Blue' : 'Orange'} team wins!`)
       } else {
-        setQuestion(nextQuestion(usedQuestions.current))
+        setQuestion(nextQuestion(usedQuestions.current, topicQueue))
         setRound((current) => current + 1)
         setMessage('First correct tap wins the pull!')
       }
@@ -136,7 +140,8 @@ function App() {
 
   function restart() {
     usedQuestions.current.clear()
-    setQuestion(nextQuestion(usedQuestions.current))
+    topicQueue.current = shuffle(TOPICS)
+    setQuestion(nextQuestion(usedQuestions.current, topicQueue))
     setRound(1)
     setRopePosition(0)
     setScores({ left: 0, right: 0 })
