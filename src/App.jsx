@@ -116,20 +116,22 @@ function App() {
 
   function chooseAnswer(team, answer) {
     if (locked || winner) return
-    if (answer !== question.correct) {
-      setMessage('Try again — only the first correct tap earns the pull!')
-      return
-    }
-    const pull = team === 'left' ? -1 : 1
+    const correct = answer === question.correct
+    const pull = team === 'left' ? (correct ? -1 : 1) : correct ? 1 : -1
     const newPosition = ropePosition + pull
     setLocked(true)
     setRopePosition(newPosition)
-    setScores((current) => ({ ...current, [team]: current[team] + 1 }))
-    setMessage(`${team === 'left' ? 'Blue' : 'Orange'} team pulls the rope!`)
+    if (correct) {
+      setScores((current) => ({ ...current, [team]: current[team] + 1 }))
+      setMessage(`${team === 'left' ? 'Blue' : 'Orange'} team pulls the rope!`)
+    } else {
+      setMessage(`Wrong answer — ${team === 'left' ? 'Orange' : 'Blue'} pulls the rope!`)
+    }
     window.setTimeout(() => {
       if (Math.abs(newPosition) >= pullsToWin) {
-        setWinner(team)
-        setMessage(`${team === 'left' ? 'Blue' : 'Orange'} team wins!`)
+        const winningTeam = newPosition < 0 ? 'left' : 'right'
+        setWinner(winningTeam)
+        setMessage(`${winningTeam === 'left' ? 'Blue' : 'Orange'} team wins!`)
       } else {
         setQuestion(nextQuestion(usedQuestions.current, topicQueue))
         setRound((current) => current + 1)
